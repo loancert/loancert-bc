@@ -294,7 +294,7 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
       <div style={{ minHeight: "100vh", background: "#0D1B2E", display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ width: "100%", maxWidth: 680 }}>
           <DemoSwitcher userId={userId} onSwitch={setUserId} />
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, background: "#fff", borderRadius: 12, padding: "10px 16px" }}>
            <img src="/LOANCERT_final_logo.png" alt="LoanCert" style={{ height: 36, objectFit: "contain" }} />
 
             <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.15)" }} />
