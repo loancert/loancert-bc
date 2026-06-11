@@ -295,7 +295,7 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
         <div style={{ width: "100%", maxWidth: 680 }}>
           <DemoSwitcher userId={userId} onSwitch={setUserId} />
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, background: "#fff", borderRadius: 12, padding: "10px 16px" }}>
-           <img src="/LOANCERT_final_logo.png" alt="LoanCert" style={{ height: 36, objectFit: "contain", filter: "brightness(0) invert(1)" }} />
+           <svg height="36" viewBox="0 0 220 60" xmlns="http://www.w3.org/2000/svg">   <text x="0" y="44" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="42" fill="white" letterSpacing="-1">LOAN</text>   <rect x="118" y="4" width="100" height="52" rx="14" fill="#009444"/>   <text x="168" y="44" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="36" fill="white" textAnchor="middle" letterSpacing="0">CERT</text>   <polyline points="126,32 133,42 148,22" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"/> </svg>
 
             <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.15)" }} />
             <div style={{ fontSize: 13, color: "#4EB3E8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Buyer Companion</div>
