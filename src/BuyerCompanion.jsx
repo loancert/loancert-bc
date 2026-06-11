@@ -295,10 +295,8 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
         <div style={{ width: "100%", maxWidth: 680 }}>
           <DemoSwitcher userId={userId} onSwitch={setUserId} />
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
-            <div style={{ display: "flex", alignItems: "center", fontWeight: 700, fontSize: 24, letterSpacing: 1 }}>
-              <span style={{ color: "#fff" }}>LOAN</span>
-              <span style={{ background: "#009444", color: "#fff", borderRadius: 8, padding: "2px 10px", marginLeft: 3 }}>CERT ✓</span>
-            </div>
+           <img src="/LOANCERT_final_logo.png" alt="LoanCert" style={{ height: 36, objectFit: "contain" }} />
+
             <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.15)" }} />
             <div style={{ fontSize: 13, color: "#4EB3E8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Buyer Companion</div>
             <div style={{ marginLeft: "auto" }}>
