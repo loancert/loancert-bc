@@ -7,15 +7,30 @@ const MAX_TOKENS = 1000;
 const MAX_MESSAGES = 50;
 const MAX_CONTENT_CHARS = 4000;
 
-// Basic in-memory rate limit. NOTE: serverless instances don't share memory and a
-// cold start resets this, so it's best-effort — it stops casual hammering of a warm
-// instance but is not a substitute for a shared store (e.g. Upstash/Redis).
+// Best-effort in-memory rate limit. NOTE: serverless instances don't share memory and a
+// cold start resets this, so it is not a substitute for a shared store (Upstash/Redis)
+// or real auth — it just raises the bar. A global ceiling backstops per-IP key spoofing.
 const RATE_WINDOW_MS = 60_000;
-const RATE_MAX = 20;
+const RATE_MAX = 20;      // per IP per window
+const GLOBAL_MAX = 300;   // across all IPs per window — backstop against distributed/spoofed abuse
 const hits = new Map();
+let globalCount = 0;
+let globalResetAt = 0;
+let lastSweep = 0;
 
 function rateLimited(ip) {
   const now = Date.now();
+
+  // Prune expired per-IP entries occasionally so the Map can't grow unbounded.
+  if (now - lastSweep > RATE_WINDOW_MS) {
+    lastSweep = now;
+    for (const [key, rec] of hits) if (now > rec.resetAt) hits.delete(key);
+  }
+
+  // Global ceiling first — caps total cost even if per-IP keys are spoofed/rotated.
+  if (now > globalResetAt) { globalCount = 0; globalResetAt = now + RATE_WINDOW_MS; }
+  if (++globalCount > GLOBAL_MAX) return true;
+
   const rec = hits.get(ip);
   if (!rec || now > rec.resetAt) {
     hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
@@ -34,7 +49,8 @@ function sanitizeIntake(raw) {
   const clean = {};
   for (const f of INTAKE_FIELDS) {
     if (raw[f] === undefined) continue;
-    clean[f] = typeof raw[f] === "boolean" ? raw[f] : String(raw[f]).slice(0, 500);
+    // Collapse newlines/control chars to blunt prompt-injection via these values.
+    clean[f] = typeof raw[f] === "boolean" ? raw[f] : String(raw[f]).replace(/[\r\n\t]+/g, " ").slice(0, 500);
   }
   return Object.keys(clean).length ? clean : null;
 }
@@ -108,7 +124,9 @@ Step 8 - Summary then ask:
 
 function originAllowed(req) {
   const origin = req.headers.origin;
-  if (!origin) return true; // non-browser callers send no Origin; other layers still apply
+  // Fail closed: browsers always send Origin on a POST fetch, so a missing Origin means a
+  // non-browser caller (curl/script). (Origin is still spoofable — real defense is auth.)
+  if (!origin) return false;
   const allow = (process.env.ALLOWED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean);
   try {
     const o = new URL(origin);
@@ -126,7 +144,9 @@ export default async function handler(req, res) {
     return res.status(403).json({ error: "Origin not allowed" });
   }
 
-  const ip = (req.headers["x-forwarded-for"] || "").split(",")[0].trim() || req.socket?.remoteAddress || "unknown";
+  // Prefer Vercel's trusted x-real-ip; else the LAST (platform-appended) x-forwarded-for hop,
+  // not the first, which the client controls and can spoof.
+  const ip = (req.headers["x-real-ip"] || (req.headers["x-forwarded-for"] || "").split(",").pop() || "").trim() || req.socket?.remoteAddress || "unknown";
   if (rateLimited(ip)) {
     return res.status(429).json({ error: "Too many requests" });
   }
@@ -174,8 +194,9 @@ export default async function handler(req, res) {
     const rawText = await response.text();
 
     if (!response.ok) {
-      console.error("[LoanCert] Anthropic error:", rawText);
-      return res.status(response.status).json({ error: "Upstream error" });
+      console.error("[LoanCert] Anthropic error:", response.status, rawText);
+      // Return a fixed status so the upstream code (401/429/etc.) isn't a probing oracle.
+      return res.status(502).json({ error: "Upstream error" });
     }
 
     return res.status(200).json(JSON.parse(rawText));
