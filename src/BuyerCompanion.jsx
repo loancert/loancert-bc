@@ -1,21 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { palette, white, green, black, gradients, font, botBubble, eyebrow } from "./constants";
 import { loadUserSession, saveMessage, saveIntakeRecord, sendChat } from "./api";
 import BotAvatar from "./components/BotAvatar";
 import TypingIndicator from "./components/TypingIndicator";
 import MessageBubble from "./components/MessageBubble";
 import CompletionCard from "./components/CompletionCard";
 import DemoSwitcher from "./components/DemoSwitcher";
-
-const GLOBAL_CSS = `
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: ${palette.navy}; font-family: ${font.family}; }
-  button, textarea, input { font-family: inherit; }
-  @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
-  @keyframes spin { to{transform:rotate(360deg)} }
-  ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:${white(0.1)};border-radius:4px}
-  textarea{resize:none} textarea:focus{outline:none}
-`;
+import styles from "./BuyerCompanion.module.css";
 
 function buildWelcomeMessage(priorIntake, lastSeen) {
   if (priorIntake) {
@@ -52,6 +42,16 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
   }, [userId]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, thinking, completed]);
+
+  // Auto-grow the input: one line when empty, grows as you type, scrolls past the max.
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    const max = 120;
+    el.style.height = Math.min(el.scrollHeight, max) + "px";
+    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+  }, [input]);
 
   const submitMessage = async (text) => {
     if (!text.trim() || thinking || completed) return;
@@ -91,69 +91,67 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
     window.open(`https://loancert.floify.com?ref=${sessionId}`, "_blank", "noopener,noreferrer");
   };
   const lastBotIndex = messages.findLastIndex((m) => m.role === "assistant");
+  const canSend = !!input.trim() && !thinking && !completed && !pageLoading;
+  const inputDim = !!completed || pageLoading;
 
   return (
-    <>
-      <style>{GLOBAL_CSS}</style>
-      <div style={{ minHeight: "100vh", background: palette.navy, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
-        <div style={{ width: "100%", maxWidth: 680 }}>
-          <DemoSwitcher userId={userId} onSwitch={setUserId} />
-          <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, background: palette.white, borderRadius: 12, padding: "10px 16px" }}>
-            <img src="/loancert-logo.png" alt="LoanCert" style={{ height: 26, display: "block" }} />
-            <div style={{ width: 1, height: 28, background: black(0.1) }} />
-            <div style={{ fontSize: 13, color: palette.accent, letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Buyer Companion</div>
-            <div style={{ marginLeft: "auto" }}>
-              <div style={{ ...eyebrow, color: black(0.4), textAlign: "right" }}>Step 1 of 3</div>
-              <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                {[1,2,3].map((s) => <div key={s} style={{ width: s===1?24:8, height: 4, borderRadius: 4, background: s===1?palette.brand:black(0.1) }} />)}
-              </div>
+    <div className={styles.page}>
+      <div className={styles.shell}>
+        <DemoSwitcher userId={userId} onSwitch={setUserId} />
+        <div className={styles.header}>
+          <img src="/loancert-logo.png" alt="LoanCert" className={styles.logo} />
+          <div className={styles.divider} />
+          <div className={styles.brandLabel}>Buyer Companion</div>
+          <div className={styles.step}>
+            <div className={styles.stepLabel}>Step 1 of 3</div>
+            <div className={styles.track}>
+              {[1, 2, 3].map((s) => <div key={s} className={`${styles.bar} ${s === 1 ? styles.barOn : styles.barOff}`} />)}
             </div>
-          </div>
-          <div style={{ background: white(0.02), border: `1px solid ${white(0.06)}`, borderRadius: 20, overflow: "hidden", boxShadow: `0 24px 60px ${black(0.4)}` }}>
-            <div style={{ display: "flex", gap: 20, padding: "10px 20px", borderBottom: `1px solid ${white(0.05)}`, background: black(0.2) }}>
-              {["No hard credit pull","No lender affiliation","Bank-grade encryption"].map((t) => (
-                <div key={t} style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <span style={{ color: palette.brand, fontSize: 10 }}>✓</span>
-                  <span style={{ fontSize: 10, color: white(0.4) }}>{t}</span>
-                </div>
-              ))}
-            </div>
-            <div style={{ height: 460, overflowY: "auto", padding: "24px 20px 8px" }}>
-              {pageLoading ? (
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", gap: 10 }}>
-                  <div style={{ width: 20, height: 20, border: `2px solid ${green(0.3)}`, borderTop: `2px solid ${palette.brand}`, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                  <span style={{ color: white(0.3), fontSize: 13 }}>Loading...</span>
-                </div>
-              ) : (
-                <>
-                  {messages.map((msg, i) => (
-                    <MessageBubble key={`${userId}-${i}`} msg={msg} isLatest={i === messages.length - 1} onOptionSelect={submitMessage} optionsDisabled={thinking || !!completed || i !== lastBotIndex} />
-                  ))}
-                  {thinking && (
-                    <div style={{ display: "flex", alignItems: "flex-start", marginBottom: 16 }}>
-                      <BotAvatar />
-                      <div style={{ ...botBubble, borderRadius: "4px 18px 18px 18px" }}><TypingIndicator /></div>
-                    </div>
-                  )}
-                  {completed && <CompletionCard data={completed} onStartVerification={handleStartVerify} />}
-                </>
-              )}
-              <div ref={bottomRef} />
-            </div>
-            <div style={{ padding: "12px 16px", borderTop: `1px solid ${white(0.06)}`, background: black(0.15), display: "flex", gap: 10, alignItems: "flex-end" }}>
-              <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKey} disabled={thinking || !!completed || pageLoading}
-                placeholder={completed ? "Intake complete" : "Tap a choice above or type your answer..."}
-                rows={1} style={{ flex: 1, background: white(0.05), border: `1px solid ${white(0.1)}`, borderRadius: 12, padding: "12px 16px", color: palette.white, fontSize: 14, lineHeight: 1.5, opacity: (completed||pageLoading)?0.4:1 }}
-                onFocus={(e) => e.target.style.borderColor=green(0.5)} onBlur={(e) => e.target.style.borderColor=white(0.1)} />
-              <button onClick={() => submitMessage(input)} disabled={thinking||!input.trim()||!!completed||pageLoading}
-                style={{ width: 44, height: 44, borderRadius: 12, border: "none", background: input.trim()&&!thinking&&!completed?gradients.brand:white(0.08), color: palette.white, cursor: input.trim()&&!thinking&&!completed?"pointer":"not-allowed", fontSize: 18, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>↑</button>
-            </div>
-          </div>
-          <div style={{ textAlign: "center", marginTop: 16, fontSize: 11, color: white(0.2) }}>
-            LoanCert Inc. 2025 · Independent Buyer Verification · Not a lender · No credit decisions made here
           </div>
         </div>
+        <div className={styles.card}>
+          <div className={styles.trust}>
+            {["No hard credit pull", "No lender affiliation", "Bank-grade encryption"].map((t) => (
+              <div key={t} className={styles.badge}>
+                <span className={styles.badgeCheck}>✓</span>
+                <span className={styles.badgeText}>{t}</span>
+              </div>
+            ))}
+          </div>
+          <div className={styles.messages}>
+            {pageLoading ? (
+              <div className={styles.loading}>
+                <div className={styles.spinner} />
+                <span className={styles.loadingText}>Loading...</span>
+              </div>
+            ) : (
+              <>
+                {messages.map((msg, i) => (
+                  <MessageBubble key={`${userId}-${i}`} msg={msg} isLatest={i === messages.length - 1} onOptionSelect={submitMessage} optionsDisabled={thinking || !!completed || i !== lastBotIndex} />
+                ))}
+                {thinking && (
+                  <div className={styles.thinkingRow}>
+                    <BotAvatar />
+                    <div className={styles.thinkingBubble}><TypingIndicator /></div>
+                  </div>
+                )}
+                {completed && <CompletionCard data={completed} onStartVerification={handleStartVerify} />}
+              </>
+            )}
+            <div ref={bottomRef} />
+          </div>
+          <div className={styles.inputBar}>
+            <textarea ref={inputRef} value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={handleKey} disabled={thinking || !!completed || pageLoading}
+              placeholder={completed ? "Intake complete" : "Type your answer, or tap a choice"}
+              rows={1} className={`${styles.textarea} ${inputDim ? styles.dim : ""}`} />
+            <button onClick={() => submitMessage(input)} disabled={!canSend}
+              className={`${styles.send} ${canSend ? styles.sendActive : ""}`}>↑</button>
+          </div>
+        </div>
+        <div className={styles.footer}>
+          LoanCert Inc. 2025 · Independent Buyer Verification · Not a lender · No credit decisions made here
+        </div>
       </div>
-    </>
+    </div>
   );
 }

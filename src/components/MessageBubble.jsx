@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
-import { palette, gradients, botBubble } from "../constants";
 import { parseOptions } from "../parseOptions";
 import BotAvatar from "./BotAvatar";
 import QuickReplies from "./QuickReplies";
+import styles from "./MessageBubble.module.css";
 
 export default function MessageBubble({ msg, isLatest, onOptionSelect, optionsDisabled }) {
   const isBot = msg.role === "assistant";
@@ -19,13 +19,16 @@ export default function MessageBubble({ msg, isLatest, onOptionSelect, optionsDi
   }, [msg.content, isLatest, isBot]);
 
   const renderBold = (line) => line.split(/\*\*(.*?)\*\*/g).map((part, i) => i % 2 ? <strong key={i}>{part}</strong> : part);
-  const fmt = (t) => t.split("\n").map((line, i) => <p key={i} style={{ margin: "2px 0" }}>{renderBold(line)}</p>);
+  const fmt = (t) => t.split("\n").map((line, i) => <p key={i} className={styles.line}>{renderBold(line)}</p>);
+
+  const rowClass = `${styles.row} ${isBot ? styles.rowBot : styles.rowUser} ${isBot && showOptions ? styles.rowTight : ""}`;
+  const bubbleClass = `${styles.bubble} ${isBot ? styles.bubbleBot : styles.bubbleUser}`;
 
   return (
     <>
-      <div style={{ display: "flex", justifyContent: isBot ? "flex-start" : "flex-end", marginBottom: isBot && showOptions ? 8 : 16 }}>
+      <div className={rowClass}>
         {isBot && <BotAvatar style={{ marginTop: 2 }} />}
-        <div style={{ maxWidth: "75%", background: isBot ? botBubble.background : gradients.brand, border: isBot ? botBubble.border : "none", borderRadius: isBot ? "4px 18px 18px 18px" : "18px 4px 18px 18px", padding: "12px 16px", color: palette.white, fontSize: 14, lineHeight: 1.65 }}>
+        <div className={bubbleClass}>
           {fmt(displayed)}
         </div>
       </div>
