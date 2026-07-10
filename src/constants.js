@@ -1,7 +1,8 @@
-// src/theme.js — single source of truth for LoanCert Buyer Companion styling
+// src/constants.js — single source of truth for LoanCert Buyer Companion styling
 
 const withAlpha = (rgb) => (a) => `rgba(${rgb}, ${a})`;
 
+// Brand palette (solid colors)
 export const palette = {
   navy:      "#0D1B2E", // page / app background
   brand:     "#009444", // LoanCert green
@@ -10,7 +11,8 @@ export const palette = {
   white:     "#fff",
 };
 
-// helpers preserve the exact alpha values already in use — no visual drift
+// Alpha helpers — call with an opacity, e.g. white(0.04).
+// These reproduce the exact rgba values already used across the UI (no visual drift).
 export const white = withAlpha("255, 255, 255");
 export const green = withAlpha("0, 148, 68");
 export const black = withAlpha("0, 0, 0");
@@ -25,14 +27,13 @@ export const gradients = {
   brand: `linear-gradient(135deg, ${palette.brand}, ${palette.brandDark})`,
 };
 
-// common semantic aliases (optional convenience)
-export const colors = {
-  bg: palette.navy,
-  brand: palette.brand,
-  accent: palette.accent,
-  text: palette.white,
-  surface: white(0.04),
-  border:  white(0.08),
-  textMuted: white(0.4),
-  textFaint: white(0.2),
+// Reusable style fragments — spread into an inline style object, e.g. style={{ ...botBubble }}
+export const botBubble = {
+  background: white(0.04),
+  border: `1px solid ${white(0.08)}`,
+};
+
+export const eyebrow = {
+  fontSize: 10,
+  textTransform: "uppercase",
 };
