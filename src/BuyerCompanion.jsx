@@ -30,22 +30,19 @@ async function saveIntakeRecord(userId, sessionId, intakeJson) {
 }
 
 function parseOptions(content) {
-  const lines = content.split("\n");
-  const optionLines = [];
-  const textLines = [];
-  const optionPattern = /^\s*(\d+)[.)]\s+(.+)$/;
-  let inOptions = false;
-  for (const line of lines) {
-    if (optionPattern.test(line)) {
-      inOptions = true;
-      optionLines.push(line.match(optionPattern)[2].trim());
-    } else {
-      if (inOptions && line.trim() === "") continue;
-      if (inOptions) { inOptions = false; }
-      textLines.push(line);
-    }
+  const MARKER = "[[OPTIONS]]";
+  const idx = content.indexOf(MARKER);
+  if (idx === -1) return { text: content.trim(), options: [] };
+  const text = content.slice(0, idx).trim();
+  let options = [];
+  const match = content.slice(idx + MARKER.length).match(/\[[\s\S]*\]/);
+  if (match) {
+    try {
+      const parsed = JSON.parse(match[0]);
+      if (Array.isArray(parsed)) options = parsed.filter((o) => typeof o === "string");
+    } catch {}
   }
-  return { text: textLines.join("\n").trim(), options: optionLines };
+  return { text, options };
 }
 
 function buildSystemPrompt(priorIntake) {
@@ -58,9 +55,11 @@ MORTGAGE EDUCATION:
 - You can reference LoanCert's verification process when relevant — for example, if asked about income verification, mention that LoanCert verifies income independently before a lender ever sees it.
 - Still never make rate quotes, loan approvals, or lender recommendations.
 FORMATTING RULES:
-- When a question has discrete choices, ALWAYS list them as a numbered list on separate lines
-- NEVER use bullet points for choices
-- Free-form questions need no numbered list
+- When a question has discrete choices, put the question in prose, then on the LAST line output the literal marker [[OPTIONS]] followed by a single-line JSON array of the choice labels. Example:
+  What is your timeline?
+  [[OPTIONS]] ["Right away / ASAP","1-3 months","Just exploring"]
+- The numbered choices listed in the flow below are for your reference — always present them to the buyer using the [[OPTIONS]] format, never as a numbered or bulleted list in the prose.
+- Free-form questions have no [[OPTIONS]] line.
 - One question at a time. Always.
 - Never say "Great!", "Awesome!", "Absolutely!"
 - Keep messages under 120 words
@@ -116,9 +115,9 @@ Step 8 - Summary then ask:
 function buildWelcomeMessage(priorIntake, lastSeen) {
   if (priorIntake) {
     const date = lastSeen ? new Date(lastSeen).toLocaleDateString("en-US", { month: "long", day: "numeric" }) : "recently";
-    return { role: "assistant", content: `Welcome back - good to see you again.\n\nWhen we last spoke on ${date}, you were targeting ${priorIntake.priceRange} with a ${priorIntake.timeline} timeline. Has anything changed?\n\n1. Nothing changed - let's pick up where we left off\n2. A few things have changed` };
+    return { role: "assistant", content: `Welcome back - good to see you again.\n\nWhen we last spoke on ${date}, you were targeting ${priorIntake.priceRange} with a ${priorIntake.timeline} timeline. Has anything changed?\n[[OPTIONS]] ["Nothing changed - let's pick up where we left off","A few things have changed"]` };
   }
-  return { role: "assistant", content: `Hi there - welcome to Buyer Companion by LoanCert.\n\nI'm here to help you understand where you stand as a buyer before you ever talk to a lender. No sales pitch, no credit pull, no pressure.\n\nWhen are you hoping to buy a home?\n\n1. Right away / ASAP\n2. 1-3 months\n3. 3-6 months\n4. 6-12 months\n5. Just exploring for now` };
+  return { role: "assistant", content: `Hi there - welcome to Buyer Companion by LoanCert.\n\nI'm here to help you understand where you stand as a buyer before you ever talk to a lender. No sales pitch, no credit pull, no pressure.\n\nWhen are you hoping to buy a home?\n[[OPTIONS]] ["Right away / ASAP","1-3 months","3-6 months","6-12 months","Just exploring for now"]` };
 }
 
 function BotAvatar({ style }) {
@@ -166,7 +165,8 @@ function MessageBubble({ msg, isLatest, onOptionSelect, optionsDisabled }) {
     return () => clearInterval(iv);
   }, [msg.content, isLatest, isBot]);
 
-  const fmt = (t) => t.split("\n").map((line, i) => <p key={i} style={{ margin: "2px 0" }} dangerouslySetInnerHTML={{ __html: line.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>") }} />);
+  const renderBold = (line) => line.split(/\*\*(.*?)\*\*/g).map((part, i) => i % 2 ? <strong key={i}>{part}</strong> : part);
+  const fmt = (t) => t.split("\n").map((line, i) => <p key={i} style={{ margin: "2px 0" }}>{renderBold(line)}</p>);
 
   return (
     <>
@@ -284,9 +284,9 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
   const handleKey = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitMessage(input); } };
   const handleStartVerify = () => {
     onStartVerify?.(userId, sessionId, completed);
-    window.open(`https://loancert.floify.com?ref=${sessionId}`, "_blank");
+    window.open(`https://loancert.floify.com?ref=${sessionId}`, "_blank", "noopener,noreferrer");
   };
-  const lastBotIndex = [...messages].map((m, i) => m.role === "assistant" ? i : -1).filter(i => i >= 0).pop();
+  const lastBotIndex = messages.findLastIndex((m) => m.role === "assistant");
 
   return (
     <>
