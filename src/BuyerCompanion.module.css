@@ -49,8 +49,7 @@
 }
 
 .stepLabel {
-  font-size: 10px;
-  text-transform: uppercase;
+  composes: eyebrow from "./shared.module.css";
   color: rgb(var(--black-rgb) / 0.55);
   text-align: right;
 }

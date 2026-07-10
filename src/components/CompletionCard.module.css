@@ -14,13 +14,10 @@
 }
 
 .check {
+  composes: circle from "../shared.module.css";
   width: 32px;
   height: 32px;
-  border-radius: 50%;
   background: var(--brand);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   color: var(--white);
 }
 
@@ -51,8 +48,7 @@
 }
 
 .label {
-  font-size: 10px;
-  text-transform: uppercase;
+  composes: eyebrow from "../shared.module.css";
   color: rgb(var(--white-rgb) / 0.6);
   margin-bottom: 2px;
 }

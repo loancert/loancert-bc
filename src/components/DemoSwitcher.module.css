@@ -9,8 +9,7 @@
 }
 
 .label {
-  font-size: 10px;
-  text-transform: uppercase;
+  composes: eyebrow from "../shared.module.css";
   color: rgb(var(--white-rgb) / 0.5);
   margin-right: 4px;
   align-self: center;
