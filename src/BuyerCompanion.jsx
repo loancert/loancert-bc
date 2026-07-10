@@ -285,7 +285,8 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
     <>
       <style>{`
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: #0D1B2E; }
+        body { background: #0D1B2E; font-family: system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        button, textarea, input { font-family: inherit; }
         @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
         @keyframes spin { to{transform:rotate(360deg)} }
         ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.1);border-radius:4px}
@@ -295,14 +296,13 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
         <div style={{ width: "100%", maxWidth: 680 }}>
           <DemoSwitcher userId={userId} onSwitch={setUserId} />
           <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16, background: "#fff", borderRadius: 12, padding: "10px 16px" }}>
-           <svg height="36" viewBox="0 0 220 60" xmlns="http://www.w3.org/2000/svg">   <text x="0" y="44" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="42" fill="white" letterSpacing="-1">LOAN</text>   <rect x="118" y="4" width="100" height="52" rx="14" fill="#009444"/>   <text x="168" y="44" fontFamily="Arial Black, sans-serif" fontWeight="900" fontSize="36" fill="white" textAnchor="middle" letterSpacing="0">CERT</text>   <polyline points="126,32 133,42 148,22" stroke="white" strokeWidth="4" fill="none" strokeLinecap="round" strokeLinejoin="round"/> </svg>
-
-            <div style={{ width: 1, height: 28, background: "rgba(255,255,255,0.15)" }} />
+            <img src="/loancert-logo.png" alt="LoanCert" style={{ height: 26, display: "block" }} />
+            <div style={{ width: 1, height: 28, background: "rgba(0,0,0,0.1)" }} />
             <div style={{ fontSize: 13, color: "#4EB3E8", letterSpacing: 2, textTransform: "uppercase", fontWeight: 600 }}>Buyer Companion</div>
             <div style={{ marginLeft: "auto" }}>
-              <div style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", textTransform: "uppercase", textAlign: "right" }}>Step 1 of 3</div>
+              <div style={{ fontSize: 10, color: "rgba(0,0,0,0.4)", textTransform: "uppercase", textAlign: "right" }}>Step 1 of 3</div>
               <div style={{ display: "flex", gap: 4, marginTop: 4 }}>
-                {[1,2,3].map((s) => <div key={s} style={{ width: s===1?24:8, height: 4, borderRadius: 4, background: s===1?"#009444":"rgba(255,255,255,0.1)" }} />)}
+                {[1,2,3].map((s) => <div key={s} style={{ width: s===1?24:8, height: 4, borderRadius: 4, background: s===1?"#009444":"rgba(0,0,0,0.1)" }} />)}
               </div>
             </div>
           </div>
