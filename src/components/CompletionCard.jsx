@@ -5,7 +5,7 @@ export default function CompletionCard({ data, onStartVerification }) {
   return (
     <div className={styles.card}>
       <div className={styles.head}>
-        <div className={styles.check}>✓</div>
+        <div className={styles.check} aria-hidden="true">✓</div>
         <div><div className={styles.title}>INTAKE COMPLETE</div><div className={styles.sub}>Buyer Companion Step 1 - Saved to your record</div></div>
       </div>
       <div className={styles.grid}>

@@ -11,7 +11,11 @@ export default function MessageBubble({ msg, isLatest, onOptionSelect, optionsDi
   const [showOptions, setShowOptions] = useState(!isLatest && isBot && options.length > 0);
 
   useEffect(() => {
-    if (!isLatest || !isBot) return;
+    if (!isLatest || !isBot || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      setDisplayed(text);
+      if (options.length > 0) setShowOptions(true);
+      return;
+    }
     setDisplayed(""); setShowOptions(false);
     let i = 0;
     const iv = setInterval(() => { i++; setDisplayed(text.slice(0, i)); if (i >= text.length) { clearInterval(iv); if (options.length > 0) setShowOptions(true); } }, 12);

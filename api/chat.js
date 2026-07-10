@@ -144,6 +144,15 @@ export default async function handler(req, res) {
     cleanMessages.push({ role: m.role, content: m.content.slice(0, MAX_CONTENT_CHARS) });
   }
 
+  // Anthropic requires the first message to be a user turn. Drop any leading
+  // assistant messages (the UI welcome, which the system prompt says to skip).
+  while (cleanMessages.length && cleanMessages[0].role === "assistant") {
+    cleanMessages.shift();
+  }
+  if (cleanMessages.length === 0) {
+    return res.status(400).json({ error: "Invalid messages" });
+  }
+
   const system = buildSystemPrompt(sanitizeIntake(priorIntake));
 
   try {

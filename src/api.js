@@ -39,5 +39,6 @@ export async function sendChat(priorIntake, messages) {
       messages: messages.map((m) => ({ role: m.role, content: m.content })),
     }),
   });
+  if (!response.ok) throw new Error(`Chat request failed (${response.status})`);
   return response.json();
 }
