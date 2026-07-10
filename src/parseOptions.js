@@ -8,13 +8,21 @@ export function parseOptions(content) {
   const idx = content.indexOf(MARKER);
   if (idx === -1) return { text: content.trim(), options: [] };
   const text = content.slice(0, idx).trim();
-  let options = [];
-  const match = content.slice(idx + MARKER.length).match(/\[[\s\S]*\]/);
-  if (match) {
+  const after = content.slice(idx + MARKER.length);
+
+  const tryParse = (s) => {
+    if (!s) return null;
     try {
-      const parsed = JSON.parse(match[0]);
-      if (Array.isArray(parsed)) options = parsed.filter((o) => typeof o === "string");
-    } catch {}
-  }
+      const parsed = JSON.parse(s[0]);
+      return Array.isArray(parsed) ? parsed.filter((o) => typeof o === "string") : null;
+    } catch {
+      return null;
+    }
+  };
+
+  // Greedy first (handles brackets inside option strings); fall back to lazy
+  // (handles stray text/brackets appended after the array) so trailing junk
+  // doesn't void otherwise-valid options.
+  const options = tryParse(after.match(/\[[\s\S]*\]/)) || tryParse(after.match(/\[[\s\S]*?\]/)) || [];
   return { text, options };
 }

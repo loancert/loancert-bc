@@ -26,11 +26,13 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
   const [completed, setCompleted] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const userIdRef = useRef(userId); // tracks the current user so in-flight replies can bail after a demo switch
 
   useEffect(() => {
+    userIdRef.current = userId;
     let cancelled = false;
     async function init() {
-      setPageLoading(true); setCompleted(null);
+      setPageLoading(true); setCompleted(null); setThinking(false);
       const data = await loadUserSession(userId);
       if (cancelled) return;
       setSessionData(data);
@@ -59,6 +61,7 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
   const submitMessage = async (text) => {
     if (!text.trim() || thinking || completed) return;
     setInput("");
+    const submittedUserId = userId;
     const userMsg = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -66,22 +69,30 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
     saveMessage(userId, sessionId, "user", text);
     try {
       const data = await sendChat(sessionData?.priorIntake, newMessages);
+      if (userIdRef.current !== submittedUserId) return; // demo switched mid-flight — drop the stale reply
       const replyText = data.content?.find((b) => b.type === "text")?.text || "";
       if (replyText.includes("CONVERSATION_COMPLETE")) {
         const jsonMatch = replyText.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          try {
-            const parsed = JSON.parse(jsonMatch[0]);
-            await saveIntakeRecord(userId, sessionId, parsed);
-            onComplete?.(userId, sessionId, parsed);
-            setCompleted(parsed);
-          } catch {}
+        let parsed = null;
+        if (jsonMatch) { try { parsed = JSON.parse(jsonMatch[0]); } catch {} }
+        if (parsed) {
+          await saveIntakeRecord(submittedUserId, sessionId, parsed);
+          onComplete?.(submittedUserId, sessionId, parsed);
+          setCompleted(parsed);
+        } else {
+          // Malformed/absent JSON: render the reply (minus the sentinel) so we never dead-end.
+          const fallback = replyText.replace("CONVERSATION_COMPLETE", "").trim();
+          setMessages((prev) => [...prev, { role: "assistant", content: fallback || "All set — let's continue." }]);
         }
-      } else {
+      } else if (replyText.trim()) {
         setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
-        saveMessage(userId, sessionId, "assistant", replyText);
+        saveMessage(submittedUserId, sessionId, "assistant", replyText);
+      } else {
+        // Empty reply: show the fallback rather than a blank bubble.
+        setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again." }]);
       }
-    } catch (err) {
+    } catch {
+      if (userIdRef.current !== submittedUserId) return;
       setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again." }]);
     }
     setThinking(false);

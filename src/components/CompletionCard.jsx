@@ -1,7 +1,9 @@
 import styles from "./CompletionCard.module.css";
 
 export default function CompletionCard({ data, onStartVerification }) {
-  const fields = [{ label: "Timeline", value: data.timeline }, { label: "Price Range", value: data.priceRange }, { label: "First-Time Buyer", value: data.firstTimeBuyer ? "Yes" : "No" }, { label: "Income Type", value: data.incomeType }, { label: "Credit Range", value: data.creditRange }, { label: "Down Payment", value: data.downPayment }];
+  // Normalize instead of trusting JS truthiness — the model could emit "No"/"false" as a string.
+  const yesNo = (v) => (v === true || /^(yes|true)$/i.test(String(v)) ? "Yes" : "No");
+  const fields = [{ label: "Timeline", value: data.timeline }, { label: "Price Range", value: data.priceRange }, { label: "First-Time Buyer", value: yesNo(data.firstTimeBuyer) }, { label: "Income Type", value: data.incomeType }, { label: "Credit Range", value: data.creditRange }, { label: "Down Payment", value: data.downPayment }];
   return (
     <div className={styles.card}>
       <div className={styles.head}>
