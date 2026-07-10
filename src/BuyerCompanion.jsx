@@ -1,49 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import { palette, white, green, black, gradients, font, botBubble, eyebrow } from "./constants";
+import { loadUserSession, saveMessage, saveIntakeRecord, sendChat } from "./api";
+import BotAvatar from "./components/BotAvatar";
+import TypingIndicator from "./components/TypingIndicator";
+import MessageBubble from "./components/MessageBubble";
+import CompletionCard from "./components/CompletionCard";
+import DemoSwitcher from "./components/DemoSwitcher";
 
-async function loadUserSession(userId) {
-  if (userId === "demo-returning") {
-    return {
-      priorIntake: {
-        timeline: "3–6 months",
-        priceRange: "$450,000–$520,000 in Sacramento area",
-        firstTimeBuyer: true,
-        incomeType: "W-2 employee",
-        creditRange: "Good 680–739",
-        downPayment: "~$25,000 saved, exploring DPA options",
-        summary: "You're a first-time buyer with stable W-2 income targeting the Sacramento market in a 3–6 month window. Your down payment is a work in progress but you're aware of assistance programs.",
-      },
-      messageHistory: [],
-      sessionCount: 1,
-      lastSeen: "2025-12-10T14:32:00Z",
-    };
-  }
-  return null;
-}
-
-async function saveMessage(userId, sessionId, role, content) {
-  console.log("[LoanCert DB] SAVE MESSAGE", { userId, sessionId, role });
-}
-
-async function saveIntakeRecord(userId, sessionId, intakeJson) {
-  console.log("[LoanCert DB] SAVE INTAKE", { userId, sessionId, intakeJson });
-}
-
-function parseOptions(content) {
-  const MARKER = "[[OPTIONS]]";
-  const idx = content.indexOf(MARKER);
-  if (idx === -1) return { text: content.trim(), options: [] };
-  const text = content.slice(0, idx).trim();
-  let options = [];
-  const match = content.slice(idx + MARKER.length).match(/\[[\s\S]*\]/);
-  if (match) {
-    try {
-      const parsed = JSON.parse(match[0]);
-      if (Array.isArray(parsed)) options = parsed.filter((o) => typeof o === "string");
-    } catch {}
-  }
-  return { text, options };
-}
+const GLOBAL_CSS = `
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: ${palette.navy}; font-family: ${font.family}; }
+  button, textarea, input { font-family: inherit; }
+  @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:${white(0.1)};border-radius:4px}
+  textarea{resize:none} textarea:focus{outline:none}
+`;
 
 function buildWelcomeMessage(priorIntake, lastSeen) {
   if (priorIntake) {
@@ -51,99 +23,6 @@ function buildWelcomeMessage(priorIntake, lastSeen) {
     return { role: "assistant", content: `Welcome back - good to see you again.\n\nWhen we last spoke on ${date}, you were targeting ${priorIntake.priceRange} with a ${priorIntake.timeline} timeline. Has anything changed?\n[[OPTIONS]] ["Nothing changed - let's pick up where we left off","A few things have changed"]` };
   }
   return { role: "assistant", content: `Hi there - welcome to Buyer Companion by LoanCert.\n\nI'm here to help you understand where you stand as a buyer before you ever talk to a lender. No sales pitch, no credit pull, no pressure.\n\nWhen are you hoping to buy a home?\n[[OPTIONS]] ["Right away / ASAP","1-3 months","3-6 months","6-12 months","Just exploring for now"]` };
-}
-
-function BotAvatar({ style }) {
-  return (
-    <div style={{ width: 34, height: 34, borderRadius: "50%", flexShrink: 0, background: gradients.brand, display: "flex", alignItems: "center", justifyContent: "center", marginRight: 10, fontSize: 14, color: palette.white, fontWeight: 700, ...style }}>BC</div>
-  );
-}
-
-function TypingIndicator() {
-  return (
-    <div style={{ display: "flex", gap: 5, padding: "14px 18px", alignItems: "center" }}>
-      {[0, 1, 2].map((i) => <div key={i} style={{ width: 8, height: 8, borderRadius: "50%", background: palette.accent, animation: "bounce 1.2s ease-in-out infinite", animationDelay: `${i * 0.2}s` }} />)}
-    </div>
-  );
-}
-
-function QuickReplies({ options, onSelect, disabled }) {
-  if (!options || options.length === 0) return null;
-  return (
-    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginLeft: 44, marginBottom: 16, marginTop: -4 }}>
-      {options.map((opt, i) => (
-        <button key={i} onClick={() => !disabled && onSelect(`${i + 1}. ${opt}`)} disabled={disabled}
-          style={{ display: "flex", alignItems: "center", gap: 7, background: white(0.04), border: `1px solid ${white(0.12)}`, borderRadius: 20, padding: "7px 14px", cursor: disabled ? "not-allowed" : "pointer", color: palette.white, fontSize: 13, opacity: disabled ? 0.35 : 1 }}
-          onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = green(0.15); e.currentTarget.style.borderColor = green(0.5); } }}
-          onMouseLeave={(e) => { e.currentTarget.style.background = white(0.04); e.currentTarget.style.borderColor = white(0.12); }}>
-          <span style={{ width: 20, height: 20, borderRadius: "50%", background: green(0.2), border: `1px solid ${green(0.4)}`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, color: palette.brand, fontWeight: 700, flexShrink: 0 }}>{i + 1}</span>
-          {opt}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function MessageBubble({ msg, isLatest, onOptionSelect, optionsDisabled }) {
-  const isBot = msg.role === "assistant";
-  const { text, options } = isBot ? parseOptions(msg.content) : { text: msg.content, options: [] };
-  const [displayed, setDisplayed] = useState(isLatest && isBot ? "" : text);
-  const [showOptions, setShowOptions] = useState(!isLatest && isBot && options.length > 0);
-
-  useEffect(() => {
-    if (!isLatest || !isBot) return;
-    setDisplayed(""); setShowOptions(false);
-    let i = 0;
-    const iv = setInterval(() => { i++; setDisplayed(text.slice(0, i)); if (i >= text.length) { clearInterval(iv); if (options.length > 0) setShowOptions(true); } }, 12);
-    return () => clearInterval(iv);
-  }, [msg.content, isLatest, isBot]);
-
-  const renderBold = (line) => line.split(/\*\*(.*?)\*\*/g).map((part, i) => i % 2 ? <strong key={i}>{part}</strong> : part);
-  const fmt = (t) => t.split("\n").map((line, i) => <p key={i} style={{ margin: "2px 0" }}>{renderBold(line)}</p>);
-
-  return (
-    <>
-      <div style={{ display: "flex", justifyContent: isBot ? "flex-start" : "flex-end", marginBottom: isBot && showOptions ? 8 : 16 }}>
-        {isBot && <BotAvatar style={{ marginTop: 2 }} />}
-        <div style={{ maxWidth: "75%", background: isBot ? botBubble.background : gradients.brand, border: isBot ? botBubble.border : "none", borderRadius: isBot ? "4px 18px 18px 18px" : "18px 4px 18px 18px", padding: "12px 16px", color: palette.white, fontSize: 14, lineHeight: 1.65 }}>
-          {fmt(displayed)}
-        </div>
-      </div>
-      {isBot && showOptions && <QuickReplies options={options} onSelect={onOptionSelect} disabled={optionsDisabled} />}
-    </>
-  );
-}
-
-function CompletionCard({ data, onStartVerification }) {
-  const fields = [{ label: "Timeline", value: data.timeline }, { label: "Price Range", value: data.priceRange }, { label: "First-Time Buyer", value: data.firstTimeBuyer ? "Yes" : "No" }, { label: "Income Type", value: data.incomeType }, { label: "Credit Range", value: data.creditRange }, { label: "Down Payment", value: data.downPayment }];
-  return (
-    <div style={{ margin: "24px 0", background: green(0.08), border: `1px solid ${green(0.3)}`, borderRadius: 16, padding: 24 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-        <div style={{ width: 32, height: 32, borderRadius: "50%", background: palette.brand, display: "flex", alignItems: "center", justifyContent: "center", color: palette.white }}>✓</div>
-        <div><div style={{ fontSize: 16, fontWeight: 700, color: palette.brand }}>INTAKE COMPLETE</div><div style={{ fontSize: 12, color: white(0.5) }}>Buyer Companion Step 1 - Saved to your record</div></div>
-      </div>
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px 20px", marginBottom: 16 }}>
-        {fields.map((f) => <div key={f.label}><div style={{ ...eyebrow, color: white(0.4), marginBottom: 2 }}>{f.label}</div><div style={{ fontSize: 13, color: palette.white }}>{f.value || "-"}</div></div>)}
-      </div>
-      <div style={{ fontSize: 13, color: white(0.6), marginBottom: 16, lineHeight: 1.6 }}>{data.summary}</div>
-      <button onClick={onStartVerification} style={{ width: "100%", padding: "14px 0", background: gradients.brand, border: "none", borderRadius: 10, color: palette.white, fontSize: 16, fontWeight: 700, cursor: "pointer" }}>
-        START MY LOANCERT VERIFICATION
-      </button>
-    </div>
-  );
-}
-
-function DemoSwitcher({ userId, onSwitch }) {
-  return (
-    <div style={{ display: "flex", gap: 8, marginBottom: 16, padding: "10px 14px", background: white(0.03), border: `1px solid ${white(0.06)}`, borderRadius: 10 }}>
-      <span style={{ ...eyebrow, color: white(0.3), marginRight: 4, alignSelf: "center" }}>Demo:</span>
-      {["demo-new", "demo-returning"].map((id) => (
-        <button key={id} onClick={() => onSwitch(id)} style={{ padding: "4px 12px", borderRadius: 6, border: "none", cursor: "pointer", fontSize: 11, background: userId === id ? palette.brand : white(0.07), color: userId === id ? palette.white : white(0.4) }}>
-          {id === "demo-new" ? "New Buyer" : "Returning Buyer"}
-        </button>
-      ))}
-    </div>
-  );
 }
 
 export default function BuyerCompanion({ userId: propUserId, onComplete, onStartVerify }) {
@@ -183,15 +62,7 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
     setThinking(true);
     saveMessage(userId, sessionId, "user", text);
     try {
-      const response = await fetch("/api/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          priorIntake: sessionData?.priorIntake,
-          messages: newMessages.map((m) => ({ role: m.role, content: m.content })),
-        }),
-      });
-      const data = await response.json();
+      const data = await sendChat(sessionData?.priorIntake, newMessages);
       const replyText = data.content?.find((b) => b.type === "text")?.text || "";
       if (replyText.includes("CONVERSATION_COMPLETE")) {
         const jsonMatch = replyText.match(/\{[\s\S]*\}/);
@@ -223,15 +94,7 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
 
   return (
     <>
-      <style>{`
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: ${palette.navy}; font-family: ${font.family}; }
-        button, textarea, input { font-family: inherit; }
-        @keyframes bounce { 0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)} }
-        @keyframes spin { to{transform:rotate(360deg)} }
-        ::-webkit-scrollbar{width:4px} ::-webkit-scrollbar-thumb{background:${white(0.1)};border-radius:4px}
-        textarea{resize:none} textarea:focus{outline:none}
-      `}</style>
+      <style>{GLOBAL_CSS}</style>
       <div style={{ minHeight: "100vh", background: palette.navy, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
         <div style={{ width: "100%", maxWidth: 680 }}>
           <DemoSwitcher userId={userId} onSwitch={setUserId} />
