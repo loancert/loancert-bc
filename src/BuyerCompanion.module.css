@@ -114,6 +114,8 @@
   height: 460px;
   overflow-y: auto;
   padding: 24px 20px 8px;
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgb(var(--white-rgb) / 0.15) transparent;
 }
 
 .loading {
@@ -208,11 +210,11 @@
   color: rgb(var(--white-rgb) / 0.5);
 }
 
-/* On phones, fill the viewport exactly: the shell becomes a flex column and the
-   message list flexes to take the leftover space, so the input is always
-   on-screen regardless of phone height (no magic numbers). dvh accounts for the
-   mobile browser's toolbars. */
-@media (max-width: 640px) {
+/* On phones AND short viewports (e.g. landscape phones — wide but short), fill the
+   viewport exactly: the shell becomes a flex column and the message list flexes to
+   take the leftover space, so the input is always on-screen regardless of height
+   (no magic numbers). dvh accounts for the mobile browser's toolbars. */
+@media (max-width: 640px), (max-height: 640px) {
   .page {
     min-height: 100dvh;
     align-items: stretch;

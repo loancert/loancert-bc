@@ -13,6 +13,8 @@
   color: #fff;
   font-size: 14px;
   line-height: 1.65;
+  overflow-wrap: break-word; /* long unbroken strings (URLs, etc.) wrap instead of overflowing */
+  min-width: 0;
 }
 
 .bubbleBot {
