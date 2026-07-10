@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { loadUserSession, saveMessage, saveIntakeRecord, sendChat } from "./api";
+import { loadUserSession, saveMessage, saveIntakeRecord, sendChat, DEMO_NEW } from "./api";
 import BotAvatar from "./components/BotAvatar";
 import TypingIndicator from "./components/TypingIndicator";
 import MessageBubble from "./components/MessageBubble";
@@ -16,7 +16,7 @@ function buildWelcomeMessage(priorIntake, lastSeen) {
 }
 
 export default function BuyerCompanion({ userId: propUserId, onComplete, onStartVerify }) {
-  const [userId, setUserId] = useState(propUserId || "demo-new");
+  const [userId, setUserId] = useState(propUserId || DEMO_NEW);
   const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
   const [sessionData, setSessionData] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);

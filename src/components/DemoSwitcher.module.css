@@ -28,5 +28,5 @@
 
 .tabActive {
   background: var(--brand);
-  color: #fff;
+  color: var(--white);
 }

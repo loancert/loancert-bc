@@ -2,8 +2,12 @@
 // loadUserSession / saveMessage / saveIntakeRecord are stubs for a future database.
 // sendChat posts the conversation to the serverless /api/chat proxy.
 
+// Demo user ids (removed with the DemoSwitcher in production). Single source of truth.
+export const DEMO_NEW = "demo-new";
+export const DEMO_RETURNING = "demo-returning";
+
 export async function loadUserSession(userId) {
-  if (userId === "demo-returning") {
+  if (userId === DEMO_RETURNING) {
     return {
       priorIntake: {
         timeline: "3–6 months",
@@ -23,7 +27,7 @@ export async function loadUserSession(userId) {
 }
 
 export async function saveMessage(userId, sessionId, role, content) {
-  console.log("[LoanCert DB] SAVE MESSAGE", { userId, sessionId, role });
+  console.log("[LoanCert DB] SAVE MESSAGE", { userId, sessionId, role, preview: String(content).slice(0, 60) });
 }
 
 export async function saveIntakeRecord(userId, sessionId, intakeJson) {

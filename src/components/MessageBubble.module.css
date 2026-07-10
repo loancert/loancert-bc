@@ -10,7 +10,7 @@
 .bubble {
   max-width: 75%;
   padding: 12px 16px;
-  color: #fff;
+  color: var(--white);
   font-size: 14px;
   line-height: 1.65;
   overflow-wrap: break-word; /* long unbroken strings (URLs, etc.) wrap instead of overflowing */

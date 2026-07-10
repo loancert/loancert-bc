@@ -21,7 +21,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
+  color: var(--white);
 }
 
 .title {
@@ -59,7 +59,7 @@
 
 .value {
   font-size: 13px;
-  color: #fff;
+  color: var(--white);
 }
 
 .summary {
@@ -75,7 +75,7 @@
   background: var(--gradient-brand);
   border: none;
   border-radius: 10px;
-  color: #fff;
+  color: var(--white);
   font-family: var(--font-condensed);
   font-size: 18px;
   font-weight: 700;
