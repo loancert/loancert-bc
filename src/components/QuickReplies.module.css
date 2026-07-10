@@ -19,6 +19,9 @@
   color: var(--white);
   font-size: 13px;
   text-align: left;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .button:hover:not(:disabled) {

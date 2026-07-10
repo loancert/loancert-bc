@@ -9,6 +9,28 @@ function buildWelcomeMessage(priorIntake, lastSeen) {
   return { role: "assistant", content: `Hi there - welcome to Buyer Companion by LoanCert.\n\nI'm here to help you understand where you stand as a buyer before you ever talk to a lender. No sales pitch, no credit pull, no pressure.\n\nWhen are you hoping to buy a home?\n[[OPTIONS]] ["Right away / ASAP","1-3 months","3-6 months","6-12 months","Just exploring for now"]` };
 }
 
+// Extract the first balanced {...} object, string-aware so braces inside string values
+// don't confuse it. Robust to stray prose braces around the completion JSON.
+function extractJson(s) {
+  for (let start = s.indexOf("{"); start !== -1; start = s.indexOf("{", start + 1)) {
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < s.length; i++) {
+      const c = s[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === "\\") esc = true;
+        else if (c === '"') inStr = false;
+      } else if (c === '"') inStr = true;
+      else if (c === "{") depth++;
+      else if (c === "}" && --depth === 0) {
+        try { return JSON.parse(s.slice(start, i + 1)); } catch { /* try the next '{' */ }
+        break;
+      }
+    }
+  }
+  return null;
+}
+
 // All chat state, effects, and the send/receive flow. The component that uses this is
 // left as pure layout — it just renders what the hook returns.
 export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } = {}) {
@@ -54,9 +76,10 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
     el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
   }, [input]);
 
-  const submitMessage = async (text) => {
+  // clearDraft=false is passed by quick-reply chips so they don't wipe an unsent draft.
+  const submitMessage = async (text, clearDraft = true) => {
     if (!text.trim() || thinking || completed) return;
-    setInput("");
+    if (clearDraft) setInput("");
     const submittedUserId = userId;
     const userMsg = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
@@ -68,9 +91,7 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
       if (userIdRef.current !== submittedUserId) return; // demo switched mid-flight — drop the stale reply
       const replyText = data.content?.find((b) => b.type === "text")?.text || "";
       if (replyText.includes("CONVERSATION_COMPLETE")) {
-        const jsonMatch = replyText.match(/\{[\s\S]*\}/);
-        let parsed = null;
-        if (jsonMatch) { try { parsed = JSON.parse(jsonMatch[0]); } catch {} }
+        const parsed = extractJson(replyText.slice(replyText.indexOf("CONVERSATION_COMPLETE") + "CONVERSATION_COMPLETE".length));
         if (parsed) {
           await saveIntakeRecord(submittedUserId, sessionId, parsed);
           onComplete?.(submittedUserId, sessionId, parsed);
@@ -95,7 +116,7 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
-  const handleKey = (e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); submitMessage(input); } };
+  const handleKey = (e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submitMessage(input); } };
   const handleStartVerify = () => {
     onStartVerify?.(userId, sessionId, completed);
     window.open(`https://loancert.floify.com?ref=${sessionId}`, "_blank", "noopener,noreferrer");

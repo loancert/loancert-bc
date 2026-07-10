@@ -49,7 +49,7 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
             ) : (
               <>
                 {messages.map((msg, i) => (
-                  <MessageBubble key={`${userId}-${i}`} msg={msg} isLatest={i === messages.length - 1} onOptionSelect={submitMessage} optionsDisabled={thinking || !!completed || i !== lastBotIndex} />
+                  <MessageBubble key={`${userId}-${i}`} msg={msg} isLatest={i === messages.length - 1} onOptionSelect={(t) => submitMessage(t, false)} optionsDisabled={thinking || !!completed || i !== lastBotIndex} />
                 ))}
                 {thinking && (
                   <div className={styles.thinkingRow}>

@@ -27,17 +27,21 @@ function rateLimited(ip) {
     for (const [key, rec] of hits) if (now > rec.resetAt) hits.delete(key);
   }
 
-  // Global ceiling first — caps total cost even if per-IP keys are spoofed/rotated.
-  if (now > globalResetAt) { globalCount = 0; globalResetAt = now + RATE_WINDOW_MS; }
-  if (++globalCount > GLOBAL_MAX) return true;
-
+  // Per-IP check FIRST. An already-throttled IP is rejected here WITHOUT counting toward
+  // the global ceiling, so one abuser can't exhaust the global budget and deny service to
+  // everyone else.
   const rec = hits.get(ip);
-  if (!rec || now > rec.resetAt) {
+  if (rec && now <= rec.resetAt) {
+    if (rec.count >= RATE_MAX) return true;
+    rec.count += 1;
+  } else {
     hits.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });
-    return false;
   }
-  rec.count += 1;
-  return rec.count > RATE_MAX;
+
+  // Global ceiling — only counts requests that passed the per-IP gate. Backstops
+  // genuinely distributed abuse (many distinct IPs), not a single spammer.
+  if (now > globalResetAt) { globalCount = 0; globalResetAt = now + RATE_WINDOW_MS; }
+  return ++globalCount > GLOBAL_MAX;
 }
 
 // Only these fields are accepted from the client's prior-intake record, each coerced to

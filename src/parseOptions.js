@@ -3,6 +3,8 @@
 // Everything from the marker onward is stripped from the displayed text; malformed
 // JSON degrades to no options + clean text.
 
+const MAX_OPTIONS = 8; // cap quick-reply buttons so a malformed reply can't flood the UI
+
 export function parseOptions(content) {
   const MARKER = "[[OPTIONS]]";
   const idx = content.indexOf(MARKER);
@@ -14,7 +16,7 @@ export function parseOptions(content) {
     if (!s) return null;
     try {
       const parsed = JSON.parse(s[0]);
-      return Array.isArray(parsed) ? parsed.filter((o) => typeof o === "string") : null;
+      return Array.isArray(parsed) ? parsed.filter((o) => typeof o === "string").slice(0, MAX_OPTIONS) : null;
     } catch {
       return null;
     }

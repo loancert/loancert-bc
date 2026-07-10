@@ -33,7 +33,16 @@ export default function MessageBubble({ msg, isLatest, onOptionSelect, optionsDi
       <div className={rowClass}>
         {isBot && <BotAvatar style={{ marginTop: 2 }} />}
         <div className={bubbleClass}>
-          {fmt(displayed)}
+          {isBot ? (
+            <>
+              {/* Animating text is hidden from assistive tech; the full text is exposed once
+                  so the aria-live log announces the reply as a whole, not letter-by-letter. */}
+              <div aria-hidden="true">{fmt(displayed)}</div>
+              <span className="sr-only">{text}</span>
+            </>
+          ) : (
+            fmt(displayed)
+          )}
         </div>
       </div>
       {isBot && showOptions && <QuickReplies options={options} onSelect={onOptionSelect} disabled={optionsDisabled} />}
