@@ -40,7 +40,8 @@ export async function sendChat(priorIntake, messages) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       priorIntake,
-      messages: messages.map((m) => ({ role: m.role, content: m.content })),
+      // Drop client-made bubbles (e.g. error fallbacks) so the model never sees turns it didn't produce.
+      messages: messages.filter((m) => !m.synthetic).map((m) => ({ role: m.role, content: m.content })),
     }),
   });
   if (!response.ok) throw new Error(`Chat request failed (${response.status})`);

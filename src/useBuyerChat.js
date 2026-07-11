@@ -128,12 +128,13 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
         setMessages((prev) => [...prev, { role: "assistant", content: replyText }]);
         saveMessage(submittedUserId, sessionId, "assistant", replyText);
       } else {
-        // Empty reply: show the fallback rather than a blank bubble.
-        setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again." }]);
+        // Empty reply: show the fallback rather than a blank bubble. `synthetic` keeps this
+        // client-made bubble out of the history we send back to the model.
+        setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again.", synthetic: true }]);
       }
     } catch {
       if (sessionIdRef.current !== submittedSessionId) return;
-      setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again." }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again.", synthetic: true }]);
     }
     setThinking(false);
     // Don't refocus the textarea once completed — it's disabled, so focus would fall to <body>.
