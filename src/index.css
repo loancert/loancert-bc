@@ -7,6 +7,7 @@
   --brand: #009444;
   --brand-dark: #007a38;
   --accent: #4eb3e8;
+  --accent-dark: #176a94; /* accent that meets contrast on the white header */
   --white: #fff;
 
   --white-rgb: 255 255 255;

@@ -38,7 +38,7 @@
 .brandLabel {
   font-family: var(--font-condensed);
   font-size: 14px;
-  color: var(--accent);
+  color: var(--accent-dark);
   letter-spacing: 2px;
   text-transform: uppercase;
   font-weight: 600;

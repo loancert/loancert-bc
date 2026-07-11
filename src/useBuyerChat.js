@@ -12,6 +12,7 @@ function buildWelcomeMessage(priorIntake, lastSeen) {
 // Extract the first balanced {...} object, string-aware so braces inside string values
 // don't confuse it. Robust to stray prose braces around the completion JSON.
 function extractJson(s) {
+  let best = null, bestKeys = -1;
   for (let start = s.indexOf("{"); start !== -1; start = s.indexOf("{", start + 1)) {
     let depth = 0, inStr = false, esc = false;
     for (let i = start; i < s.length; i++) {
@@ -23,12 +24,18 @@ function extractJson(s) {
       } else if (c === '"') inStr = true;
       else if (c === "{") depth++;
       else if (c === "}" && --depth === 0) {
-        try { return JSON.parse(s.slice(start, i + 1)); } catch { /* try the next '{' */ }
+        try {
+          const obj = JSON.parse(s.slice(start, i + 1));
+          const keys = obj && typeof obj === "object" ? Object.keys(obj).length : -1;
+          // Prefer the richest object (the intake has ~7 keys), so a stray {"ok":true}
+          // before the real payload doesn't win. Later ties win.
+          if (keys >= bestKeys) { best = obj; bestKeys = keys; }
+        } catch { /* not JSON — try the next '{' */ }
         break;
       }
     }
   }
-  return null;
+  return best;
 }
 
 // All chat state, effects, and the send/receive flow. The component that uses this is
@@ -81,6 +88,7 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
     if (!text.trim() || thinking || completed) return;
     if (clearDraft) setInput("");
     const submittedUserId = userId;
+    let didComplete = false;
     const userMsg = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
     setMessages(newMessages);
@@ -96,6 +104,7 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
           await saveIntakeRecord(submittedUserId, sessionId, parsed);
           onComplete?.(submittedUserId, sessionId, parsed);
           setCompleted(parsed);
+          didComplete = true;
         } else {
           // Malformed/absent JSON: render the reply (minus the sentinel) so we never dead-end.
           const fallback = replyText.replace("CONVERSATION_COMPLETE", "").trim();
@@ -113,7 +122,8 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
       setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again." }]);
     }
     setThinking(false);
-    setTimeout(() => inputRef.current?.focus(), 100);
+    // Don't refocus the textarea once completed — it's disabled, so focus would fall to <body>.
+    if (!didComplete) setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const handleKey = (e) => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); submitMessage(input); } };
@@ -122,7 +132,12 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
     window.open(`https://loancert.floify.com?ref=${sessionId}`, "_blank", "noopener,noreferrer");
   };
 
-  const lastBotIndex = messages.findLastIndex((m) => m.role === "assistant");
+  // Manual reverse scan instead of Array.findLastIndex (ES2023) — that method isn't in
+  // Vite's default browser targets and would crash the whole app on older browsers.
+  let lastBotIndex = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i].role === "assistant") { lastBotIndex = i; break; }
+  }
   const canSend = !!input.trim() && !thinking && !completed && !pageLoading;
   const inputDim = !!completed || pageLoading;
 

@@ -165,7 +165,9 @@ export default async function handler(req, res) {
     if (!m || (m.role !== "user" && m.role !== "assistant") || typeof m.content !== "string") {
       return res.status(400).json({ error: "Invalid message shape" });
     }
-    cleanMessages.push({ role: m.role, content: m.content.slice(0, MAX_CONTENT_CHARS) });
+    const content = m.content.slice(0, MAX_CONTENT_CHARS);
+    if (!content.trim()) return res.status(400).json({ error: "Empty message content" });
+    cleanMessages.push({ role: m.role, content });
   }
 
   // Anthropic requires the first message to be a user turn. Drop any leading
@@ -203,7 +205,14 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: "Upstream error" });
     }
 
-    return res.status(200).json(JSON.parse(rawText));
+    let data;
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      console.error("[LoanCert] Bad upstream JSON:", rawText.slice(0, 200));
+      return res.status(502).json({ error: "Upstream error" });
+    }
+    return res.status(200).json(data);
   } catch (error) {
     console.error("[LoanCert] Handler error:", error.message);
     return res.status(500).json({ error: "Server error" });

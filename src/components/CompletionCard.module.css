@@ -41,6 +41,14 @@
   margin-bottom: 16px;
 }
 
+.grid > div {
+  min-width: 0;
+}
+
+.value {
+  overflow-wrap: break-word;
+}
+
 @media (max-width: 380px) {
   .grid {
     grid-template-columns: 1fr;
