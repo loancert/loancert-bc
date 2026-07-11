@@ -221,6 +221,7 @@
   .shell {
     display: flex;
     flex-direction: column;
+    height: calc(100vh - 24px); /* fallback for browsers without dvh */
     height: calc(100dvh - 24px);
   }
   .card {

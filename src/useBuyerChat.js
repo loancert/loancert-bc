@@ -11,10 +11,17 @@ function buildWelcomeMessage(priorIntake, lastSeen) {
 
 // Extract the first balanced {...} object, string-aware so braces inside string values
 // don't confuse it. Robust to stray prose braces around the completion JSON.
-function extractJson(s) {
-  let best = null, bestKeys = -1;
-  for (let start = s.indexOf("{"); start !== -1; start = s.indexOf("{", start + 1)) {
-    let depth = 0, inStr = false, esc = false;
+const newSessionId = () => `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+const INTAKE_KEYS = ["timeline", "priceRange", "firstTimeBuyer", "incomeType", "creditRange", "downPayment", "summary"];
+
+// Find the completion intake object: scan TOP-LEVEL balanced {...} objects and pick the one
+// carrying the most expected intake keys. Skips nested sub-objects and any stray/empty {}, and
+// returns null unless a real intake-shaped object is present — so we never falsely "complete".
+function extractIntake(s) {
+  let best = null, bestScore = 0;
+  for (let start = s.indexOf("{"); start !== -1; ) {
+    let depth = 0, inStr = false, esc = false, end = -1;
     for (let i = start; i < s.length; i++) {
       const c = s[i];
       if (inStr) {
@@ -23,17 +30,17 @@ function extractJson(s) {
         else if (c === '"') inStr = false;
       } else if (c === '"') inStr = true;
       else if (c === "{") depth++;
-      else if (c === "}" && --depth === 0) {
-        try {
-          const obj = JSON.parse(s.slice(start, i + 1));
-          const keys = obj && typeof obj === "object" ? Object.keys(obj).length : -1;
-          // Prefer the richest object (the intake has ~7 keys), so a stray {"ok":true}
-          // before the real payload doesn't win. Later ties win.
-          if (keys >= bestKeys) { best = obj; bestKeys = keys; }
-        } catch { /* not JSON — try the next '{' */ }
-        break;
-      }
+      else if (c === "}" && --depth === 0) { end = i; break; }
     }
+    if (end === -1) break; // unbalanced tail
+    try {
+      const obj = JSON.parse(s.slice(start, end + 1));
+      if (obj && typeof obj === "object") {
+        const score = INTAKE_KEYS.filter((k) => k in obj).length;
+        if (score > bestScore) { best = obj; bestScore = score; }
+      }
+    } catch { /* not JSON — skip */ }
+    start = s.indexOf("{", end + 1); // jump past this object so nested braces aren't rescanned
   }
   return best;
 }
@@ -42,7 +49,7 @@ function extractJson(s) {
 // left as pure layout — it just renders what the hook returns.
 export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } = {}) {
   const [userId, setUserId] = useState(propUserId || DEMO_NEW);
-  const [sessionId] = useState(() => `session_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`);
+  const [sessionId, setSessionId] = useState(newSessionId);
   const [sessionData, setSessionData] = useState(null);
   const [pageLoading, setPageLoading] = useState(true);
   const [messages, setMessages] = useState([]);
@@ -51,14 +58,20 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
   const [completed, setCompleted] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
-  const userIdRef = useRef(userId); // tracks the current user so in-flight replies can bail after a demo switch
+  const userIdRef = useRef(userId);
+  const sessionIdRef = useRef(sessionId); // in-flight replies compare against this so an A->B->A switch can't leak a stale reply
 
   useEffect(() => {
     userIdRef.current = userId;
+    const sid = newSessionId(); // fresh session per user switch so records/refs don't collide
+    setSessionId(sid);
+    sessionIdRef.current = sid;
+    setInput("");
     let cancelled = false;
     async function init() {
       setPageLoading(true); setCompleted(null); setThinking(false);
-      const data = await loadUserSession(userId);
+      let data = null;
+      try { data = await loadUserSession(userId); } catch { /* fall through to a new-user session */ }
       if (cancelled) return;
       setSessionData(data);
       setMessages([buildWelcomeMessage(data?.priorIntake, data?.lastSeen)]);
@@ -88,6 +101,7 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
     if (!text.trim() || thinking || completed) return;
     if (clearDraft) setInput("");
     const submittedUserId = userId;
+    const submittedSessionId = sessionId;
     let didComplete = false;
     const userMsg = { role: "user", content: text };
     const newMessages = [...messages, userMsg];
@@ -96,10 +110,10 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
     saveMessage(userId, sessionId, "user", text);
     try {
       const data = await sendChat(sessionData?.priorIntake, newMessages);
-      if (userIdRef.current !== submittedUserId) return; // demo switched mid-flight — drop the stale reply
+      if (sessionIdRef.current !== submittedSessionId) return; // session changed (switch/ABA) — drop stale reply
       const replyText = data.content?.find((b) => b.type === "text")?.text || "";
       if (replyText.includes("CONVERSATION_COMPLETE")) {
-        const parsed = extractJson(replyText.slice(replyText.indexOf("CONVERSATION_COMPLETE") + "CONVERSATION_COMPLETE".length));
+        const parsed = extractIntake(replyText);
         if (parsed) {
           await saveIntakeRecord(submittedUserId, sessionId, parsed);
           onComplete?.(submittedUserId, sessionId, parsed);
@@ -107,7 +121,7 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
           didComplete = true;
         } else {
           // Malformed/absent JSON: render the reply (minus the sentinel) so we never dead-end.
-          const fallback = replyText.replace("CONVERSATION_COMPLETE", "").trim();
+          const fallback = replyText.replaceAll("CONVERSATION_COMPLETE", "").trim();
           setMessages((prev) => [...prev, { role: "assistant", content: fallback || "All set — let's continue." }]);
         }
       } else if (replyText.trim()) {
@@ -118,7 +132,7 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
         setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again." }]);
       }
     } catch {
-      if (userIdRef.current !== submittedUserId) return;
+      if (sessionIdRef.current !== submittedSessionId) return;
       setMessages((prev) => [...prev, { role: "assistant", content: "Something went wrong - please try again." }]);
     }
     setThinking(false);
