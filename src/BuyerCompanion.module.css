@@ -134,6 +134,12 @@
   animation: spin 0.8s linear infinite;
 }
 
+/* Keyframes must live in this module so CSS Modules scopes it to match the
+   `animation: spin` reference above (a global @keyframes would break the link). */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 .loadingText {
   color: rgb(var(--white-rgb) / 0.55);
   font-size: 13px;
