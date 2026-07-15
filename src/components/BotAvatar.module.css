@@ -1,0 +1,10 @@
+.avatar {
+  composes: circle from "../shared.module.css";
+  width: 34px;
+  height: 34px;
+  background: var(--gradient-brand);
+  margin-right: 10px;
+  font-size: 14px;
+  color: var(--white);
+  font-weight: 700;
+}

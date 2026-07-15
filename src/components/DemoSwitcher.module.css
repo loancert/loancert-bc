@@ -1,0 +1,31 @@
+.wrap {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  background: rgb(var(--white-rgb) / 0.03);
+  border: 1px solid rgb(var(--white-rgb) / 0.06);
+  border-radius: 10px;
+}
+
+.label {
+  composes: eyebrow from "../shared.module.css";
+  color: rgb(var(--white-rgb) / 0.5);
+  margin-right: 4px;
+  align-self: center;
+}
+
+.tab {
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  background: rgb(var(--white-rgb) / 0.07);
+  color: rgb(var(--white-rgb) / 0.6);
+}
+
+.tabActive {
+  background: var(--brand);
+  color: var(--white);
+}

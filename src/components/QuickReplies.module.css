@@ -1,0 +1,46 @@
+.wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-left: 44px;
+  margin-bottom: 16px;
+  margin-top: -4px;
+}
+
+.button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  background: rgb(var(--white-rgb) / 0.04);
+  border: 1px solid rgb(var(--white-rgb) / 0.12);
+  border-radius: 20px;
+  padding: 7px 14px;
+  cursor: pointer;
+  color: var(--white);
+  font-size: 13px;
+  text-align: left;
+  overflow-wrap: break-word;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.button:hover:not(:disabled) {
+  background: rgb(var(--green-rgb) / 0.15);
+  border-color: rgb(var(--green-rgb) / 0.5);
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.35;
+}
+
+.num {
+  composes: circle from "../shared.module.css";
+  width: 20px;
+  height: 20px;
+  background: rgb(var(--green-rgb) / 0.2);
+  border: 1px solid rgb(var(--green-rgb) / 0.4);
+  font-size: 10px;
+  color: var(--white);
+  font-weight: 700;
+}

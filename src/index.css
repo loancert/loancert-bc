@@ -1,0 +1,84 @@
+/* src/index.css — global styles + design tokens (CSS variables).
+   Tokens mirror the old constants.js. Alpha surfaces use rgb(var(--x-rgb) / a)
+   to reproduce the exact values the JS white()/green()/black() helpers produced. */
+
+:root {
+  --navy: #0d1b2e;
+  --brand: #009444;
+  --brand-dark: #007a38;
+  --accent: #4eb3e8;
+  --accent-dark: #176a94; /* accent that meets contrast on the white header */
+  --white: #fff;
+
+  --white-rgb: 255 255 255;
+  --green-rgb: 0 148 68;
+  --black-rgb: 0 0 0;
+
+  --font-sans: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-condensed: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --gradient-brand: linear-gradient(135deg, var(--brand), var(--brand-dark));
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--navy);
+  font-family: var(--font-sans);
+}
+
+button,
+textarea,
+input {
+  font-family: inherit;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgb(var(--white-rgb) / 0.1);
+  border-radius: 4px;
+}
+
+textarea {
+  resize: none;
+}
+
+/* No focus ring for mouse users, but a clear one for keyboard users. */
+:focus {
+  outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Visually hidden but available to screen readers. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
