@@ -112,6 +112,11 @@
 .messages {
   height: 460px;
   overflow-y: auto;
+  /* Containing block for the absolutely-positioned .sr-only spans inside each bubble.
+     Without it their containing block is the document, so overflow-y can't clip them:
+     each new message anchors one further down and grows the page, which adds dead space
+     below the layout and makes the whole document scroll (very visible when embedded). */
+  position: relative;
   /* Keep the scroll inside the chat. Without this, hitting the top/bottom of the list
      chains the leftover scroll to the parent — which scrolls the host page behind the
      embedded widget on loancert.com. */
