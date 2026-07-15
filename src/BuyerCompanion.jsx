@@ -6,6 +6,11 @@ import DemoSwitcher from "./components/DemoSwitcher";
 import { useBuyerChat } from "./useBuyerChat";
 import styles from "./BuyerCompanion.module.css";
 
+// Internal demo control: only shown with ?demo=1 in the URL. Buyers on the embedded
+// widget must never see it — switching to "Returning Buyer" shows a fabricated intake
+// record (a made-up budget/credit profile) that isn't theirs.
+const SHOW_DEMO = typeof window !== "undefined" && new URLSearchParams(window.location.search).has("demo");
+
 export default function BuyerCompanion({ userId: propUserId, onComplete, onStartVerify }) {
   const {
     userId, setUserId,
@@ -19,7 +24,7 @@ export default function BuyerCompanion({ userId: propUserId, onComplete, onStart
   return (
     <main className={styles.page}>
       <div className={styles.shell}>
-        <DemoSwitcher userId={userId} onSwitch={setUserId} />
+        {SHOW_DEMO && <DemoSwitcher userId={userId} onSwitch={setUserId} />}
         <div className={styles.header}>
           <img src="/loancert-logo.png" alt="LoanCert" className={styles.logo} />
           <div className={styles.divider} aria-hidden="true" />
