@@ -112,6 +112,10 @@
 .messages {
   height: 460px;
   overflow-y: auto;
+  /* Keep the scroll inside the chat. Without this, hitting the top/bottom of the list
+     chains the leftover scroll to the parent — which scrolls the host page behind the
+     embedded widget on loancert.com. */
+  overscroll-behavior: contain;
   padding: 24px 20px 8px;
   scrollbar-width: thin; /* Firefox */
   scrollbar-color: rgb(var(--white-rgb) / 0.15) transparent;

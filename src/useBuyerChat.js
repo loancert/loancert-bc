@@ -92,8 +92,13 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
     if (!el) return;
     el.style.height = "auto";
     const max = 120;
-    el.style.height = Math.min(el.scrollHeight, max) + "px";
-    el.style.overflowY = el.scrollHeight > max ? "auto" : "hidden";
+    // scrollHeight excludes borders, but `box-sizing: border-box` makes `height` include
+    // them — so add them back. Without this the box lands one border-width short and
+    // `overflow-y: hidden` silently clips the last line instead of scrolling it.
+    const borders = el.offsetHeight - el.clientHeight;
+    const needed = el.scrollHeight + borders;
+    el.style.height = Math.min(needed, max) + "px";
+    el.style.overflowY = needed > max ? "auto" : "hidden";
   }, [input]);
 
   // clearDraft=false is passed by quick-reply chips so they don't wipe an unsent draft.
