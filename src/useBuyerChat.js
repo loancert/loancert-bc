@@ -90,13 +90,19 @@ export function useBuyerChat({ userId: propUserId, onComplete, onStartVerify } =
   useEffect(() => {
     const el = inputRef.current;
     if (!el) return;
-    el.style.height = "auto";
     const max = 120;
+    el.style.height = "auto";
     // scrollHeight excludes borders, but `box-sizing: border-box` makes `height` include
-    // them — so add them back. Without this the box lands one border-width short and
+    // them — so add them back, or the box lands one border-width short and
     // `overflow-y: hidden` silently clips the last line instead of scrolling it.
     const borders = el.offsetHeight - el.clientHeight;
     const needed = el.scrollHeight + borders;
+    // A hidden ancestor measures 0 on every box metric. Embedded, the host's chat popup
+    // starts display:none and the iframe loads inside it, so this runs with no layout —
+    // writing that 0 would stick a 0px height that never recovers once the popup opens.
+    // Leaving height:auto renders the single row correctly until the next keystroke,
+    // which re-runs this with real measurements.
+    if (!needed) return;
     el.style.height = Math.min(needed, max) + "px";
     el.style.overflowY = needed > max ? "auto" : "hidden";
   }, [input]);
